@@ -16,6 +16,18 @@
 > Todo o crédito pelo widget original é dele. Aqui estão só os ajustes feitos em cima da versão 0.2.7,
 > distribuídos sob a mesma licença (GPL-3.0). Se gostou, apoie o autor original.
 
+## Prints
+
+<p align="center">
+  <img src="docs/screenshot-grid.png" alt="Grade 7×5 com pastas, busca e controles de página">
+</p>
+<p align="center"><sub>Grade 7×5 com pastas (Audio, Comunicações, Jetbrains), busca no topo e as bolinhas de página com o botão <b>+</b>.</sub></p>
+
+<p align="center">
+  <img src="docs/screenshot-dock.png" alt="Ícone de foguete no dock">
+</p>
+<p align="center"><sub>O ícone de foguete como primeiro item do dock, no estilo dos ícones Colloid.</sub></p>
+
 ## O que mudou em relação ao AppBay original
 
 **Correções para o Plasma 6.6**
