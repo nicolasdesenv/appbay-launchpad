@@ -45,6 +45,14 @@ Item {
 
     signal relocateGroup(int draggedIndex, int targetIndex)
 
+    // soltar na borda de um ícone: inserir antes do índice targetIndex
+    signal reorderDrop(int draggedIndex, int targetIndex)
+
+    // centro do ícone = criar/entrar em pasta; bordas = reposicionar
+    function inGroupZone(px, py) {
+        return Math.abs(px - width / 2) < sizeIcon * 0.55 && Math.abs(py - height / 2) < sizeIcon * 0.55
+    }
+
     signal openFolder
     signal closeFolder
     signal openGroup(var groupModel, int indexGroup)
@@ -200,15 +208,29 @@ Item {
         anchors.fill: parent
 
         onEntered: function(drag) {
-            dropHighlight.opacity = 0.3
+            dropHighlight.opacity = (drag.source !== delegateRoot && inGroupZone(drag.x, drag.y)) ? 0.3 : 0
         }
 
-        onExited: function(drag) {
+        onPositionChanged: function(drag) {
+            dropHighlight.opacity = (drag.source !== delegateRoot && inGroupZone(drag.x, drag.y)) ? 0.3 : 0
+        }
+
+        onExited: {
             dropHighlight.opacity = 0
         }
 
-        onDropped: function(drop, drag) {
+        onDropped: function(drop) {
             dropHighlight.opacity = 0
+
+            if (drop.source === delegateRoot)
+                return
+
+            if (!activeGroup && listGeneralActive && !inGroupZone(drop.x, drop.y)) {
+                var t = drop.x < width / 2 ? delegateRoot.itemIndex : delegateRoot.itemIndex + 1
+                delegateRoot.reorderDrop(drop.source.itemIndex, t)
+                drop.accept()
+                return
+            }
 
             if (!activeGroup) {
                 if (!drop.source.isGroup) {
@@ -263,11 +285,38 @@ Item {
         anchors.fill: parent
 
         property bool changeGroup: false
-        property bool isDragging: false
+        property bool isDragging: mode === 2
         property point startPos
         property int dragThreshold: 10
 
+        property int mode: 0
+        property point pressScene
+        property double pressTime: 0
+        property point lastScene
+
+        pressAndHoldInterval: 400
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+        function beginIconDrag() {
+            mode = 2
+            lastScene = pressScene
+            delegateRoot.dragActive = true
+            dragContainer.z = 9999
+        }
+
+        function updateDragPos() {
+            var p = delegateRoot.mapFromItem(null, lastScene.x, lastScene.y)
+            dragContainer.x = p.x - startPos.x
+            dragContainer.y = p.y - startPos.y
+        }
+
+        // mantém o ícone sob o cursor enquanto a página desliza
+        Timer {
+            interval: 16
+            repeat: true
+            running: mouseArea.mode === 2
+            onTriggered: mouseArea.updateDragPos()
+        }
 
         // NO usar drag.target - manejamos el arrastre manualmente
 
@@ -280,31 +329,63 @@ Item {
                 return
             }
             startPos = Qt.point(mouse.x, mouse.y)
-            isDragging = false
+            pressScene = mapToItem(null, mouse.x, mouse.y)
+            pressTime = Date.now()
+            mode = 0
         }
 
         onPositionChanged: function(mouse) {
-            if (pressed && !isDragging) {
-                var dx = mouse.x - startPos.x
-                var dy = mouse.y - startPos.y
-                var distance = Math.sqrt(dx * dx + dy * dy)
+            if (!pressed)
+                return
+            var sp = mapToItem(null, mouse.x, mouse.y)
 
-                if (distance > dragThreshold) {
-                    isDragging = true
-                    delegateRoot.dragActive = true
-                    dragContainer.z = 9999
+            if (mode === 0) {
+                var dx = sp.x - pressScene.x
+                var dy = sp.y - pressScene.y
+                if (Math.sqrt(dx * dx + dy * dy) > dragThreshold) {
+                    // clicar e arrastar para o lado = trocar de página (como no macOS);
+                    // clicar e segurar = pegar o ícone
+                    if (rootScope.canSwipe() && Math.abs(dx) >= Math.abs(dy)) {
+                        mode = 1
+                        rootScope.swipeStart(pressScene.x, pressTime)
+                    } else {
+                        beginIconDrag()
+                    }
                 }
             }
 
-            if (isDragging) {
-                // Mover manualmente el dragContainer
-                dragContainer.x = mouse.x - startPos.x
-                dragContainer.y = mouse.y - startPos.y
+            if (mode === 1) {
+                rootScope.swipeUpdate(sp.x)
+            } else if (mode === 2) {
+                lastScene = sp
+                updateDragPos()
+                rootScope.dragMovedTo(sp.x)
             }
         }
 
+        onCanceled: {
+            if (mode === 1)
+                rootScope.swipeEnd(rootScope.swipeStartX)
+            if (mode === 2) {
+                rootScope.dragFinished()
+                delegateRoot.dragActive = false
+                dragContainer.z = 0
+                returnAnimation.start()
+                rootScope.dragCleanup()
+            }
+            mode = 0
+        }
+
         onReleased: function(mouse) {
-            if (isDragging) {
+            if (mode === 1) {
+                rootScope.swipeEnd(mapToItem(null, mouse.x, mouse.y).x)
+                mode = 0
+                return
+            }
+            if (mode === 2) {
+                rootScope.dragFinished()
+                var p0 = dragContainer.mapToItem(null, 0, 0)
+                var oldIndex = delegateRoot.itemIndex
 
                 if (activeGroup) {
                     // logica para determinar donde se solto el icono
@@ -324,12 +405,19 @@ Item {
                 dragContainer.Drag.drop()
 
                 if (!changeGroup) {
+                    if (delegateRoot.itemIndex >= 0 && delegateRoot.itemIndex !== oldIndex) {
+                        // o item mudou de lugar: parte de onde foi solto até a nova célula
+                        var p1 = delegateRoot.mapToItem(null, 0, 0)
+                        dragContainer.x = p0.x - p1.x
+                        dragContainer.y = p0.y - p1.y
+                    }
                     returnAnimation.start()
                 }
 
                 dragContainer.z = 0
                 delegateRoot.dragActive = false
-                isDragging = false
+                mode = 0
+                rootScope.dragCleanup()
 
             } else {
                 if (mouse.button === Qt.LeftButton) {
@@ -355,12 +443,8 @@ Item {
 
 
         onPressAndHold: function(mouse) {
-            if (mouse.button === Qt.LeftButton) {
-                if (!isDragging) {
-                    isDragging = true
-                    delegateRoot.dragActive = true
-                    dragContainer.z = 9999
-                }
+            if (mouse.button === Qt.LeftButton && mode === 0) {
+                beginIconDrag()
             }
         }
     }

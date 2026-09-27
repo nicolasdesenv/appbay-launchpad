@@ -4,22 +4,27 @@
             {
                 "Email": "adolfo@librepixels.com",
                 "Name": "zayronxio"
+            },
+            {
+                "Name": "nicolasdesenv (fork)"
             }
         ],
-        "Name": "AppBay",
+        "Name": "AppBay Launchpad",
         "Id": "Plasma.AppBay",
-        "Description": "application launcher that replicates a macOS launchpad",
+        "Description": "Launcher estilo Launchpad do macOS (fork do AppBay de zayronxio)",
         "Category": "Utilities",
-        "Icon": "start-here-kde",
+        "Icon": "appbay-launchpad",
         "EnabledByDefault": true,
         "License": "GPL-3.0+",
         "ServiceTypes": [
             "Plasma/Applet"
         ],
-        "Version": "0.2.7",
-        "Website": "https://www.pling.com/p/2327339/"
+        "Version": "0.2.7-launchpad.1",
+        "Website": "https://github.com/nicolasdesenv/appbay-launchpad"
     },
-    "X-Plasma-Provides": [ "org.kde.plasma.launchermenu" ],
+    "X-Plasma-Provides": [
+        "org.kde.plasma.launchermenu"
+    ],
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-MainScript": "ui/main.qml"
 }

@@ -4,6 +4,7 @@ import QtQuick.Dialogs
 import org.kde.plasma.plasmoid
 import org.kde.plasma.private.kicker 0.1 as Kicker
 import org.kde.plasma.core as PlasmaCore
+import org.kde.kirigami as Kirigami
 import "Utils.js" as Utils
 import "." as Module
 
@@ -19,8 +20,8 @@ PlasmoidItem {
   property var folderAppModel: null
   property int parentGroupIndex
   property bool iconsAnamitaionInitialLoad: false
-  property color bgColor: PlasmaCore.Theme.backgroundColor
-  property color entryDialogColor: PlasmaCore.Theme.textColor
+  property color bgColor: Kirigami.Theme.backgroundColor
+  property color entryDialogColor: Kirigami.Theme.textColor
   property var subModel: []
   property var hiddenApps: []
   property QtObject globalFavorites: rootModel.favoritesModel
@@ -45,6 +46,65 @@ PlasmoidItem {
     category: "AppBay"
     property var configHiddenApps: []
     property var configSubModelJson: []
+    property string configAppOrderJson: ""
+  }
+
+  // Ordem personalizada dos itens (estilo macOS). Vazia = ordem alfabética padrão.
+  property var appOrder: []
+
+  // Quebra de página (item invisível no appsModel); permite páginas vazias ou com poucos apps
+  function breakItem(id) {
+    return { display: "", isGroup: false, isBreak: true, appIndex: -1, breakId: id }
+  }
+
+  function orderKey(item) {
+    if (item.isBreak === true)
+      return "break:" + item.breakId
+    if (item.isGroup)
+      return "group:" + item.display
+    return item.favoriteId ? item.favoriteId : item.display
+  }
+
+  function saveOrder() {
+    var keys = []
+    var nb = 0
+    for (var i = 0; i < appsModel.count; i++) {
+      if (appsModel.get(i).isBreak === true)
+        appsModel.setProperty(i, "breakId", nb++)
+      keys.push(orderKey(appsModel.get(i)))
+    }
+    appOrder = keys
+    appBaySettings.configAppOrderJson = JSON.stringify(keys)
+  }
+
+  function saveOrderIfCustom() {
+    if (appOrder.length > 0)
+      saveOrder()
+  }
+
+  function applyOrder() {
+    if (appOrder.length === 0)
+      return
+    var rank = {}
+    for (var i = 0; i < appOrder.length; i++) {
+      rank[appOrder[i]] = i
+      if (String(appOrder[i]).indexOf("break:") === 0)
+        appsModel.append(breakItem(parseInt(String(appOrder[i]).substring(6))))
+    }
+    // itens sem posição salva (apps novos) vão para o final, como no macOS
+    var big = appOrder.length + 100000
+    for (var p = 0; p < appsModel.count; p++) {
+      var best = p
+      var bestRank = rank[orderKey(appsModel.get(p))]
+      if (bestRank === undefined) bestRank = big + p
+      for (var q = p + 1; q < appsModel.count; q++) {
+        var r = rank[orderKey(appsModel.get(q))]
+        if (r === undefined) r = big + q
+        if (r < bestRank) { best = q; bestRank = r }
+      }
+      if (best !== p)
+        appsModel.move(best, p, 1)
+    }
   }
 
   onHiddenAppsConfigsChanged: {
@@ -71,6 +131,13 @@ PlasmoidItem {
 
     if (appBaySettings.value("configHiddenApps")) {
       hiddenApps = appBaySettings.value("configHiddenApps")
+    }
+
+    try {
+      var order = appBaySettings.configAppOrderJson
+      appOrder = order ? JSON.parse(order) : []
+    } catch (e) {
+      appOrder = []
     }
   }
 
@@ -225,6 +292,7 @@ PlasmoidItem {
                 modelGroup: resolvedElements
               })
         }
+        applyOrder()
   }
 
 

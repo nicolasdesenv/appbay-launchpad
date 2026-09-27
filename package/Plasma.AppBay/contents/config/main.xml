@@ -7,7 +7,7 @@
 
   <group name="General">
     <entry name="icon" type="String">
-      <default>start-here-kde</default>
+      <default>appbay-launchpad</default>
     </entry>
     <entry name="useCustomButtonImage" type="Bool">
       <default>false</default>
@@ -17,13 +17,13 @@
     </entry>
 
     <entry name="dockF" type="bool">
-      <default>true</default>
+      <default>false</default>
     </entry>
     <entry name="cellSize" type="Int">
       <default>256</default>
     </entry>
     <entry name="iconSize" type="Int">
-      <default>96</default>
+      <default>88</default>
     </entry>
 
     <entry name="enabledShadow" type="Bool">

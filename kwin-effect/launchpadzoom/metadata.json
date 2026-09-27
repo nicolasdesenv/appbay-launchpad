@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "KWin/Effect",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "nicolasdesenv"
+            }
+        ],
+        "Category": "Appearance",
+        "Description": "Animação de zoom estilo macOS ao abrir e fechar o Painel de aplicativos",
+        "EnabledByDefault": false,
+        "Id": "launchpadzoom",
+        "License": "GPL-3.0+",
+        "Name": "Launchpad Zoom"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

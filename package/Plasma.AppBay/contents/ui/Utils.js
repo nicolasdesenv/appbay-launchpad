@@ -127,6 +127,7 @@ function removeGroup(index) {
     for (var g = 0; g < arrayOfNames.length; g++) {
         addAppAppModel(arrayOfNames[g])
     }
+    saveOrderIfCustom()
 
 
 }
@@ -177,6 +178,7 @@ function removeAppOfGroup(targetIndex, appName) {
             })
 
             addAppAppModel(appName)
+            saveOrderIfCustom()
 
         }
 
@@ -198,6 +200,7 @@ function renameGroup(index,newName) {
     }
 
     appsModel.set(index, { "display": newName })
+    saveOrderIfCustom()
 
 }
 
@@ -209,4 +212,5 @@ function relocateGroup(index) {
             break
         }
     }
+    saveOrderIfCustom()
 }
