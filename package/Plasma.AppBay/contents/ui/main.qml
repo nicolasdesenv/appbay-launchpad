@@ -29,6 +29,8 @@ PlasmoidItem {
 
   property int oldPage
   property int currentPage: 0
+  // muda a cada generateModel(); a grade usa para redistribuir as páginas
+  property int modelRevision: 0
 
   property var hiddenAppsConfigs: Plasmoid.configuration.hiddenApps
 
@@ -296,6 +298,7 @@ PlasmoidItem {
               })
         }
         applyOrder()
+        modelRevision++
   }
 
 

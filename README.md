@@ -43,7 +43,10 @@
   - soltar **entre** dois ícones ou num espaço vazio para mudar o app de lugar;
   - levar até a **borda** da tela para ir para outra página.
 - **Páginas explícitas:** crie e remova páginas com os botões **+** e **−** ao lado das bolinhas. Na última página, levar um app até a borda direita cria uma página nova.
-- A ordem dos apps e as páginas ficam salvas. Apps instalados depois vão para o final.
+- A ordem dos apps, as páginas e as pastas ficam salvas, mesmo reiniciando o Plasma. Apps instalados depois vão para o final.
+- **Nome da pasta em cima** quando ela está aberta. Clique no nome para renomear.
+- **Navegação pelo teclado:** setas para escolher o app e **Enter** para abrir, inclusive nos resultados da busca.
+- A busca é apagada ao fechar o launcher.
 
 **Extras**
 - Sem a barra de favoritos por padrão, para não competir com o seu dock.
@@ -108,7 +111,8 @@ Depois:
 | Ação | Como fazer |
 |---|---|
 | Abrir / fechar | Tecla **Meta**, clique no foguete do painel ou **Esc** |
-| Buscar um app | Comece a digitar |
+| Buscar um app | Comece a digitar. **Enter** abre o primeiro resultado |
+| Escolher um app pelo teclado | **Setas** para mover e **Enter** para abrir (em pastas também) |
 | Trocar de página | Arraste para o lado, role o mouse, deslize no touchpad ou clique nas bolinhas |
 | Pegar um ícone | Clique e **segure** por meio segundo |
 | Criar pasta | Segure um app e solte no **centro** de outro |
@@ -117,7 +121,8 @@ Depois:
 | Levar para outra página | Segure o app e leve até a borda da tela |
 | Criar página | Botão **+** ao lado das bolinhas |
 | Remover página | Botão **−** (só em página vazia) |
-| Renomear pasta / esconder app | Botão direito no item |
+| Renomear pasta | Abra a pasta e clique no nome em cima. **Enter** confirma |
+| Esconder app | Botão direito no item |
 
 ## Atualizar
 
@@ -160,6 +165,7 @@ kpackagetool6 -t Plasma/Applet -s Plasma.AppBay
 > [!NOTE]
 > Até a versão `0.2.7-launchpad.1`, as pastas sumiam quando o Plasma reiniciava ou quando você saía da sessão.
 > Pastas que já sumiram não voltam com a atualização. Crie de novo uma vez, e a partir daí elas ficam salvas.
+> As páginas que você criou também não se perdiam, só não apareciam ao abrir o launcher. Depois de atualizar elas voltam a aparecer. Se sobrar alguma vazia, apague no botão **−**.
 
 ## Desinstalar
 

@@ -20,7 +20,7 @@
         "ServiceTypes": [
             "Plasma/Applet"
         ],
-        "Version": "0.2.7-launchpad.2",
+        "Version": "0.2.7-launchpad.3",
         "Website": "https://github.com/nicolasdesenv/appbay-launchpad"
     },
     "X-Plasma-Provides": [

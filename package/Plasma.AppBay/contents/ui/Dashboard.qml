@@ -45,7 +45,12 @@ Kicker.DashboardWindow {
         Connections {
             target: dashboard
             function onVisibleChanged() {
+                // fechar e abrir de novo começa sem busca, fora de pastas e sem seleção
+                searchEntry.text = ""
+                activeGroup = false
+                appList.kbIndex = -1
                 if (dashboard.visible) {
+                    appList.normalizePages()
                     currentPage = 0
                     background.opacity = 1.0
                     Qt.callLater(function() {
@@ -68,6 +73,12 @@ Kicker.DashboardWindow {
                 topMargin: 30
             }
             width: Math.min(parent.width - 60, 400) // Ancho máximo
+            onNavKey: (event) => {
+                if (appList.handleNavKey(event))
+                    event.accepted = true
+            }
+            // na busca, o primeiro resultado já vem selecionado (Enter abre)
+            onTextChanged: appList.kbIndex = text === "" ? -1 : 0
         }
 
         PowerActions {

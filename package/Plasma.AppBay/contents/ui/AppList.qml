@@ -116,6 +116,16 @@ FocusScope {
         }
     }
 
+    // as páginas salvas só aparecem depois do relayout; refaz quando a lista é
+    // recarregada e quando o launcher é criado (a lista costuma já estar pronta)
+    Connections {
+        target: kicker
+        function onModelRevisionChanged() {
+            Qt.callLater(rootScope.normalizePages)
+        }
+    }
+    Component.onCompleted: normalizePages()
+
     function addPageAfter(p) {
         var pos = p < pageCount - 1 ? pageStarts[p + 1] - 1 : appsModel.count
         appsModel.insert(pos, breakItem(0))
@@ -141,6 +151,24 @@ FocusScope {
 
     property string nameActiveGroup
     property int activeIndex
+
+    // as pastas são identificadas pelo nome: não aceita vazio nem nome repetido
+    function renameFolder(index, newName) {
+        var item = appsModel.get(index)
+        newName = newName.trim()
+        if (!item || !item.isGroup || newName === "" || newName === item.display)
+            return false
+        for (var i = 0; i < subModel.length; i++)
+            if (subModel[i].displayGrupName === newName)
+                return false
+        Utils.renameGroup(index, newName)
+        return true
+    }
+
+    function openFolderName() {
+        var item = activeGroup ? appsModel.get(parentGroupIndex) : null
+        return item && item.isGroup ? item.display : ""
+    }
 
     property int marginMinimalGroup: activeGroup && folderAppModel ? folderAppModel.count < maxItemsPerRow ? ((maxItemsPerRow - folderAppModel.count)*cellWidth)/2 : 0 : 0
 
@@ -286,6 +314,118 @@ FocusScope {
 
     onModelActiveChanged: {
         totalItems = 0
+        kbIndex = listGeneralActive ? -1 : 0
+    }
+
+    // --- Navegação pelo teclado: setas movem a seleção, Enter abre ---
+    property int kbIndex: -1
+
+    function kbCount() {
+        return modelActive && modelActive.count !== undefined ? modelActive.count : 0
+    }
+
+    // página e posição do item i na grade; null para quebras de página
+    function kbPos(i) {
+        if (i < 0 || i >= kbCount())
+            return null
+        if (usePageLayout) {
+            if (slotMap.length !== appsModel.count)
+                relayout()
+            var p = slotMap[i]
+            return p && p.slot >= 0 ? p : null
+        }
+        return { page: Math.floor(i / itemsPerPage), slot: i % itemsPerPage }
+    }
+
+    function kbPageLength(p) {
+        if (usePageLayout)
+            return p >= 0 && p < pageCount ? pageLength(p) : 0
+        return Math.max(0, Math.min(itemsPerPage, kbCount() - p * itemsPerPage))
+    }
+
+    function kbIndexAt(p, slot) {
+        if (slot < 0 || slot >= kbPageLength(p))
+            return -1
+        return usePageLayout ? pageStarts[p] + slot : p * itemsPerPage + slot
+    }
+
+    function moveKb(dx, dy) {
+        var n = kbCount()
+        if (n === 0)
+            return
+        var cur = kbPos(kbIndex)
+        if (!cur) {
+            // primeira seta: seleciona o primeiro item da página visível
+            var first = kbIndexAt(currentPage, 0)
+            for (var f = 0; first < 0 && f < n; f++)
+                if (kbPos(f)) first = f
+            kbIndex = first
+        } else if (dx !== 0) {
+            // esquerda/direita seguem a ordem e passam de página
+            var next = kbIndex + dx
+            while (next >= 0 && next < n && !kbPos(next))
+                next += dx
+            if (next >= 0 && next < n)
+                kbIndex = next
+        } else {
+            var slot = cur.slot + dy * maxItemsPerRow
+            var len = kbPageLength(cur.page)
+            var target = kbIndexAt(cur.page, slot)
+            // descendo para uma linha incompleta: vai para o último item dela
+            if (target < 0 && dy > 0 && slot >= len
+                    && Math.floor(slot / maxItemsPerRow) <= Math.floor((len - 1) / maxItemsPerRow))
+                target = kbIndexAt(cur.page, len - 1)
+            if (target >= 0)
+                kbIndex = target
+        }
+        var p = kbPos(kbIndex)
+        if (p && p.page !== currentPage)
+            goToPage(p.page)
+    }
+
+    function activateKb() {
+        var n = kbCount()
+        var i = kbIndex
+        if (n === 0 || i < 0)
+            return false
+        if (i >= n)
+            i = 0
+        if (activeGroup) {
+            openGridApp(folderAppModel.get(i).appIndex)
+        } else if (listGeneralActive) {
+            var it = appsModel.get(i)
+            if (!it || it.isBreak === true)
+                return false
+            if (it.isGroup) {
+                folderAppModel = it.modelGroup
+                parentGroupIndex = i
+                oldPage = currentPage
+                currentPage = 0
+                activeGroup = true
+                kbIndex = 0
+            } else {
+                openGridApp(it.appIndex)
+            }
+        } else {
+            // resultados da busca (KRunner): apps, configurações, calculadora...
+            searchModel.trigger(i, "", null)
+            dashboard.visible = false
+        }
+        return true
+    }
+
+    function handleNavKey(event) {
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+            return activateKb()
+        // Shift/Ctrl+setas continuam editando o texto da busca
+        if (event.modifiers & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier))
+            return false
+        var dx = event.key === Qt.Key_Left ? -1 : event.key === Qt.Key_Right ? 1 : 0
+        var dy = event.key === Qt.Key_Up ? -1 : event.key === Qt.Key_Down ? 1 : 0
+        if (dx === 0 && dy === 0)
+            return false
+        moveKb(dx, dy)
+        return true
     }
 
     function handleCreateGroup(index, item1, item2) {
@@ -408,8 +548,8 @@ FocusScope {
         }
         onAccepted: {
             if (nameField.text.trim() !== "") {
-                nameActiveGroup = nameField.text.trim()
-                Utils.renameGroup(activeIndex, nameActiveGroup)
+                if (renameFolder(activeIndex, nameField.text))
+                    nameActiveGroup = nameField.text.trim()
             }
         }
     }
@@ -526,6 +666,48 @@ FocusScope {
                     NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
                 }
 
+                // nome da pasta aberta, em cima (como no macOS); clique para renomear
+                TextField {
+                    id: folderTitle
+                    visible: activeGroup
+                    width: Math.max(bgGroup.width, 360)
+                    anchors.bottom: parent.top
+                    anchors.bottomMargin: 18
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    leftPadding: 12
+                    rightPadding: 12
+                    font.pixelSize: 28
+                    font.weight: Font.Medium
+                    color: Kirigami.Theme.textColor
+                    selectByMouse: true
+                    maximumLength: 40
+                    background: Rectangle {
+                        radius: 10
+                        color: folderTitle.activeFocus ? Qt.rgba(bgColor.r, bgColor.g, bgColor.b, 0.7) : "transparent"
+                        border.width: folderTitle.activeFocus ? 1 : 0
+                        border.color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.7)
+                    }
+
+                    Connections {
+                        target: kicker
+                        function onActiveGroupChanged() {
+                            if (activeGroup)
+                                folderTitle.text = openFolderName()
+                        }
+                    }
+
+                    onActiveFocusChanged: {
+                        if (activeFocus)
+                            selectAll()
+                    }
+                    // Enter confirma; clicar fora ou fechar a pasta também
+                    onAccepted: searchEntry.forceActiveFocus()
+                    onEditingFinished: {
+                        if (!renameFolder(parentGroupIndex, text))
+                            text = openFolderName()
+                    }
+                }
             }
 
 
@@ -575,6 +757,19 @@ FocusScope {
 
                     x: (row * cellWidth) + (page * (maxItemsPerRow * cellWidth + marginPage)) + extraPadding
                     y: column * cellHeight
+
+                    // destaque do item selecionado pelo teclado
+                    Rectangle {
+                        visible: index === kbIndex && !(model.isBreak === true)
+                        width: Math.min(parent.width - 8, iconSize + 56)
+                        height: iconSize + 60
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: parent.height / 2 - iconSize / 2 - 12
+                        radius: 14
+                        color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.3)
+                        border.width: 1
+                        border.color: Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.6)
+                    }
 
                     ListDelegate {
                         id: ld

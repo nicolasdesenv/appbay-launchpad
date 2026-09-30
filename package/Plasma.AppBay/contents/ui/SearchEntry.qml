@@ -13,6 +13,8 @@ Item {
     property alias text: searchText.text
 
     property bool activeCursor: false
+    // setas e Enter para a grade; quem trata marca event.accepted
+    signal navKey(var event)
 
     function isColorLight(color) {
         let r = color.r * 255;
@@ -23,6 +25,10 @@ Item {
     }
 
     Keys.onPressed: (event) => {
+        // ao abrir, o foco está aqui e não no TextField
+        navKey(event)
+        if (event.accepted)
+            return
         if (event.text !== "" && !event.ctrl && !event.alt && !event.meta) {
             event.accepted = true;
             searchActive = true
@@ -47,9 +53,13 @@ Item {
             anchors.fill: parent
             color: entryTextColor
             horizontalAlignment: Text.AlignHCenter
-            leftPadding: 28 // Espacio fijo para el icono
+            // padding igual dos dois lados, senão o texto fica deslocado para a direita
+            leftPadding: 28
+            rightPadding: 28
             focus: true
             selectByMouse: true // Permitir selección de texto con mouse
+
+            Keys.onPressed: (event) => navKey(event)
 
             background: Rectangle {
                 color: "transparent"
