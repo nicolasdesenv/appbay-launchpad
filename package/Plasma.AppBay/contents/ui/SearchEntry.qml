@@ -1,153 +1,81 @@
 import QtQuick
-import QtQuick.Effects
 import QtQuick.Controls
-import Qt5Compat.GraphicalEffects
 import org.kde.kirigami as Kirigami
+import "Utils.js" as Utils
 
 Item {
+    id: root
+
     property int entryHeight: 32
-    property color entryColor: bgColor
+    property color entryColor: kicker.bgColor
     property color entryTextColor: Kirigami.Theme.textColor
-    property double entryOpacity: 0.3
-    property string placeholderText: "Search"
     property alias text: searchText.text
 
-    property bool activeCursor: false
     // setas e Enter para a grade; quem trata marca event.accepted
     signal navKey(var event)
 
-    function isColorLight(color) {
-        let r = color.r * 255;
-        let g = color.g * 255;
-        let b = color.b * 255;
-        let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        return luminance > 127.5;
-    }
-
+    // ao abrir, o foco está aqui e não no campo: a primeira letra começa a busca
     Keys.onPressed: (event) => {
-        // ao abrir, o foco está aqui e não no TextField
         navKey(event)
         if (event.accepted)
             return
-        if (event.text !== "" && !event.ctrl && !event.alt && !event.meta) {
-            event.accepted = true;
-            searchActive = true
+        if (event.text !== "" && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+            event.accepted = true
             searchText.text = event.text
-            searchText.focus = true
+            searchText.forceActiveFocus()
         }
     }
 
     Rectangle {
         id: background
-        height: entryHeight
-        width: 190
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        radius: entryHeight/2
-        color: Qt.rgba(entryColor.r,entryColor.g,entryColor.b,entryOpacity)
+        height: root.entryHeight
+        width: 220
+        anchors.centerIn: parent
+        radius: height / 2
+        color: Qt.rgba(root.entryColor.r, root.entryColor.g, root.entryColor.b, 0.3)
         border.width: 1
-        border.color: isColorLight(entryColor) ? Qt.rgba(0, 0, 0, 0.3) : Qt.rgba(255, 255, 255, 0.2)
+        border.color: Utils.isColorLight(root.entryColor) ? Qt.rgba(0, 0, 0, 0.3) : Qt.rgba(1, 1, 1, 0.2)
 
         TextField {
             id: searchText
             anchors.fill: parent
-            color: entryTextColor
+            color: root.entryTextColor
             horizontalAlignment: Text.AlignHCenter
             // padding igual dos dois lados, senão o texto fica deslocado para a direita
             leftPadding: 28
             rightPadding: 28
-            focus: true
-            selectByMouse: true // Permitir selección de texto con mouse
+            selectByMouse: true
+            background: null
 
-            Keys.onPressed: (event) => navKey(event)
-
-            background: Rectangle {
-                color: "transparent"
-            }
-
-            onFocusChanged: {
-                if (focus){
-                    activeCursor = true
-                } else {
-                    activeCursor = false
-                }
-            }
+            Keys.onPressed: (event) => root.navKey(event)
 
             onTextChanged: {
-                runnerModel.query = text;
-                if (text == ""){
-                    searchActive = false
-                    listActive = "generalList"
-                } else {
-                    searchActive = true
-                    listActive = "searchList"
-                }
+                runnerModel.query = text
+                kicker.searchActive = text !== ""
+                kicker.listActive = text === "" ? "generalList" : "searchList"
             }
         }
 
-
-        // Placeholder personalizado cuando no hay texto
-        Item {
-            id: placeholder
-            anchors.fill: parent
-            visible: searchText.text === "" && !activeCursor
-            enabled: false
+        // placeholder: lupa + "Buscar", some quando o campo está em uso
+        Row {
+            anchors.centerIn: parent
+            spacing: 6
+            visible: searchText.text === "" && !searchText.activeFocus
             opacity: 0.7
 
             Kirigami.Icon {
-                id: searchIcon
                 source: "edit-find"
                 width: 16
                 height: 16
-                anchors {
-                    verticalCenter: parent.verticalCenter
-                    right: placeholderTextItem.left
-                    rightMargin: 4
-                }
-                color: entryTextColor
+                anchors.verticalCenter: parent.verticalCenter
+                color: root.entryTextColor
             }
-
             Text {
-                id: placeholderTextItem
-                anchors.centerIn: parent
-                text: placeholderText
-                color: entryTextColor
+                text: Utils.tr("Search")
+                color: root.entryTextColor
                 font: searchText.font
+                anchors.verticalCenter: parent.verticalCenter
             }
-        }
-
-    }
-
-    Item {
-        id: mask
-        width: background.width + 16
-        height: background.height + 16
-        anchors.centerIn: background
-        visible:  false
-        Rectangle {
-            color: "black"
-            width: background.width
-            height: background.height
-            anchors.centerIn: parent
-            radius: background.radius
-        }
-    }
-
-    MultiEffect {
-        source: mask
-        anchors.fill: mask
-        //visible: false
-        //shadowScale:  1.1
-        shadowEnabled: true //Plasmoid.configuration.enabledShadow
-        //blurMultiplier: 2
-        blurMax: 22
-        shadowHorizontalOffset: 0
-        shadowVerticalOffset: 2
-        shadowOpacity: 0.2
-        layer.enabled: true
-        layer.effect: OpacityMask {
-            invert: true
-            maskSource: mask
         }
     }
 }

@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "nicolasdesenv"
+            }
+        ],
+        "Category": "Window Management",
+        "Description": "Abre e fecha o AppBay Launchpad com o gesto de pinça de 4 dedos no touchpad, como no macOS",
+        "EnabledByDefault": false,
+        "Id": "appbaygestures",
+        "License": "GPL-3.0+",
+        "Name": "AppBay Launchpad: gesto de pinça"
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}

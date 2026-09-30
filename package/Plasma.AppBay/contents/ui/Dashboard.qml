@@ -1,78 +1,53 @@
 import QtQuick
-import org.kde.plasma.core as PlasmaCore
-import org.kde.kwindowsystem 1.0
 import org.kde.plasma.plasmoid
 import org.kde.plasma.private.kicker 0.1 as Kicker
 
 Kicker.DashboardWindow {
     id: dashboard
 
-    //visualParent: root
-
     backgroundColor: "transparent"
-    //flags: Qt.Window | Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.ToolTip
 
+    // Esc sai de uma coisa por vez: modo organizar, busca, pasta, launcher
     onKeyEscapePressed: {
-        listActive = "generalList"
-        if (searchActive) {
+        if (kicker.jiggle) {
+            kicker.jiggle = false
+        } else if (kicker.searchActive) {
             searchEntry.text = ""
-            //listActive = "generalList"
-        } else if (activeGroup){
-            //currentPage = oldPage
-            activeGroup = false
-            currentPage = oldPage
+        } else if (kicker.activeGroup) {
+            appList.closeFolder()
         } else {
             toggle()
         }
     }
 
-
+    onVisibleChanged: {
+        // fechar e abrir de novo começa sem busca, fora de pastas e sem seleção.
+        // A página em que você estava é mantida, como no macOS.
+        appList.resetPointer()
+        searchEntry.text = ""
+        kicker.jiggle = false
+        if (kicker.activeGroup)
+            appList.closeFolder()
+        appList.kbIndex = -1
+        if (visible)
+            Qt.callLater(function () { searchEntry.forceActiveFocus() })
+    }
 
     Rectangle {
         id: background
-
         anchors.fill: parent
-        color: Qt.rgba(bgColor.r, bgColor.g, bgColor.b, 0.6)
-        opacity: 0.0
+        // o efeito do KWin (Launchpad Zoom) cuida do zoom/fade de abrir e fechar
+        color: Qt.rgba(kicker.bgColor.r, kicker.bgColor.g, kicker.bgColor.b, 0.6)
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 400
-                easing.type: Easing.InOutQuad
-            }
-        }
-
-        Connections {
-            target: dashboard
-            function onVisibleChanged() {
-                // fechar e abrir de novo começa sem busca, fora de pastas e sem seleção
-                searchEntry.text = ""
-                activeGroup = false
-                appList.kbIndex = -1
-                if (dashboard.visible) {
-                    appList.normalizePages()
-                    currentPage = 0
-                    background.opacity = 1.0
-                    Qt.callLater(function() {
-                        searchEntry.forceActiveFocus()
-                    })
-                } else {
-                    background.opacity = 0.0
-                }
-            }
-        }
-
-        // SearchEntry en posición fija arriba
         SearchEntry {
             id: searchEntry
-            //focus: true
             height: 48
             anchors {
                 top: parent.top
                 horizontalCenter: parent.horizontalCenter
                 topMargin: 30
             }
-            width: Math.min(parent.width - 60, 400) // Ancho máximo
+            width: Math.min(parent.width - 60, 400)
             onNavKey: (event) => {
                 if (appList.handleNavKey(event))
                     event.accepted = true
@@ -89,39 +64,28 @@ Kicker.DashboardWindow {
             visible: Plasmoid.configuration.systemActionsButtons
         }
 
-        // AppList ocupando el resto del espacio
         AppList {
             id: appList
-            height: parent.height - searchEntry.height
-            width:  parent.width
+            height: parent.height - searchEntry.height - 50
+            width: parent.width
             anchors {
                 top: searchEntry.bottom
                 topMargin: 20
                 horizontalCenter: parent.horizontalCenter
             }
-            //focus: true
-            visible: true
-
-            onOpenGridApp: function (ID) {
-                console.log("abriendo app:", ID)
-                var applicationsModel = rootModel.modelForRow(0)
-                if (applicationsModel) {
-                    applicationsModel.trigger(ID, "", null)
-                    dashboard.visible = false
-                }
-            }
         }
 
-        FavorirtesDock {
-            id: favorirtesDock
-            sizeIconDock: 64
-            spacingMargin: 8
-            visible: Plasmoid.configuration.dockF && !activeGroup
-            maxIconsInDock: 8
+        Loader {
+            active: Plasmoid.configuration.dockF
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 8
             anchors.horizontalCenter: parent.horizontalCenter
+            visible: !kicker.activeGroup
+            sourceComponent: FavorirtesDock {
+                sizeIconDock: 64
+                spacingMargin: 8
+                maxIconsInDock: 8
+            }
         }
     }
-
 }

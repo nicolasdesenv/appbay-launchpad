@@ -1,109 +1,66 @@
 import QtQuick
 import org.kde.plasma.extras as PlasmaExtras
-import "." as Module
 import "Utils.js" as Utils
 
+// Menu do botão direito. Um só para a grade inteira, criado no primeiro uso
+// (antes cada ícone criava o seu, o que pesava ao montar a grade).
 Item {
     id: root
 
-    property QtObject menu: contextMenuComponent.createObject(root);
+    property int targetIndex: -1
+    property bool targetIsGroup: false
+    property var menu: null
 
-    property Item visualParent
-    property int indexInAppsModel
-    property bool isGruop
-    property int appIndex  // El índice en el modelo original
-    property string currentName: ""  // Agregar esta propiedad
+    signal hideApp(int index)
+    signal addToFavorites(int index)
+    signal renameFolder(int index)
+    signal deleteFolder(int index)
+    signal editLayout()
 
-
-    function open(x, y, idx) {
-        menu.open(x, y);
-        appIndex = idx
+    function openFor(item, index, isGroup, x, y) {
+        targetIndex = index
+        targetIsGroup = isGroup
+        if (!menu)
+            menu = menuComponent.createObject(root)
+        menu.visualParent = item
+        menu.open(x, y)
     }
-
-    function hiddeApp() {
-        for (var f = 0; f < appsModel.count; f++){
-            if (appsModel.get(f).appIndex === appIndex) {
-                hiddenApps.push(appsModel.get(f).display)
-                appsModel.remove(f,1)
-                Module.ToggleActive.hiddenAppSignal()
-                break
-            }
-        }
-    }
-
-    function addToFavorites() {
-        // Método alternativo: obtener desde appsModel
-
-        // Si no está en appsModel, obtener del modelo original
-        if (!rootModel || rootModel.count === 0) {
-            console.warn("rootModel no está disponible")
-            return
-        }
-
-        var applicationsModel = rootModel.modelForRow(0)
-        if (!applicationsModel) {
-            console.warn("No se pudo obtener applicationsModel")
-            return
-        }
-
-        var appIndexObj = applicationsModel.index(appIndex, 0)
-        var favoriteId = applicationsModel.data(appIndexObj, Kicker.UrlRole)
-
-        if (favoriteId && favoriteId.length > 0) {
-            console.log("Adding favorite from rootModel:", favoriteId)
-            rootModel.favoritesModel.addFavorite(favoriteId)
-        } else {
-            console.warn("No favoriteId válido encontrado para appIndex:", appIndex)
-        }
-    }
-
-    /*/Kirigami.PromptDialog {
-        id: renameDialog
-        title: "Rename Group"
-
-
-    }/*/
 
     Component {
-        id: contextMenuComponent
+        id: menuComponent
 
         PlasmaExtras.Menu {
-            visualParent: root.visualParent
-
             PlasmaExtras.MenuItem {
-                text: "Hidden App"
+                text: Utils.tr("Hide App")
                 icon: "view-hidden-symbolic"
-                visible: !isGruop
-                onClicked: {
-                    hiddeApp()
-                }
+                visible: !root.targetIsGroup
+                onClicked: root.hideApp(root.targetIndex)
             }
-
             PlasmaExtras.MenuItem {
-                text: "Add to Favorites"
+                text: Utils.tr("Add to Favorites")
                 icon: "favorite"
-                visible: !isGruop
-                onClicked: {
-                    addToFavorites()
-                }
+                visible: !root.targetIsGroup
+                onClicked: root.addToFavorites(root.targetIndex)
             }
             PlasmaExtras.MenuItem {
-                text: "Rename Group"
+                text: Utils.tr("Rename Folder")
                 icon: "entry-edit-symbolic"
-                visible: isGruop
-                onClicked: {
-                    nameActiveGroup = currentName
-                    activeIndex = indexInAppsModel
-                    rename.open()
-                }
+                visible: root.targetIsGroup
+                onClicked: root.renameFolder(root.targetIndex)
             }
             PlasmaExtras.MenuItem {
-                text: "Delate Group"
-                icon: "remove-symbolic"
-                visible: isGruop
-                onClicked: {
-                    Module.ToggleActive.delateGroup(indexInAppsModel)
-                }
+                text: Utils.tr("Delete Folder")
+                icon: "folder-open-symbolic"
+                visible: root.targetIsGroup
+                onClicked: root.deleteFolder(root.targetIndex)
+            }
+            PlasmaExtras.MenuItem {
+                separator: true
+            }
+            PlasmaExtras.MenuItem {
+                text: Utils.tr("Edit Layout")
+                icon: "transform-move"
+                onClicked: root.editLayout()
             }
         }
     }

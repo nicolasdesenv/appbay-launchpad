@@ -47,6 +47,8 @@ Item {
     onHeightChanged: updateSizeHints()
 
     function updateSizeHints() {
+        if (!parent)
+            return
         if (useCustomButtonImage) {
             if (vertical) {
                 const scaledHeight = Math.floor(parent.width * (buttonIcon.implicitHeight / buttonIcon.implicitWidth));

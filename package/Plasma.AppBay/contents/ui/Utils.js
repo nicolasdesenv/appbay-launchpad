@@ -1,216 +1,51 @@
-/*/
-updatesubModel(name,newArrayModel) funcion para actulizar el array subModel y cargar los datos en settigs
-removeGroup(index) funcion para eliminar un grupo completo
-removeAppOfGroup(targetIndex, appName) function para eliminar una app de un grupo
-removeByAppIndex(appIndex) function para eliminar una app de el model de uso general (appsModel), el model que proporciona los datos es rootModel y no es editable
-/*/
+.pragma library
 
-function toArray(listModel) {
-    var arr = []
-    if (!listModel)
-        return arr
-
-        // Si es un QQmlListModel, recorre sus elementos
-        if (listModel.count !== undefined) {
-            for (var i = 0; i < listModel.count; i++) {
-                arr.push(listModel.get(i))
-            }
-        }
-        // Si ya es array, simplemente devuélvelo
-        else if (Array.isArray(listModel)) {
-            arr = listModel
-        }
-
-        return arr
+// Textos da interface. A chave é o texto em inglês; o idioma segue o do sistema
+// (português e espanhol traduzidos, o resto fica em inglês).
+var strings = {
+    "Search": { pt: "Buscar", es: "Buscar" },
+    "Folder": { pt: "Pasta", es: "Carpeta" },
+    "Hide App": { pt: "Ocultar app", es: "Ocultar app" },
+    "Add to Favorites": { pt: "Adicionar aos favoritos", es: "Añadir a favoritos" },
+    "Rename Folder": { pt: "Renomear pasta", es: "Renombrar carpeta" },
+    "Delete Folder": { pt: "Desfazer pasta", es: "Deshacer carpeta" },
+    "Edit Layout": { pt: "Organizar apps", es: "Organizar apps" },
+    "Done": { pt: "Concluído", es: "Listo" },
+    "Add page": { pt: "Adicionar página", es: "Añadir página" },
+    "Remove this page": { pt: "Remover esta página", es: "Quitar esta página" },
+    "Move the apps off this page to remove it": { pt: "Tire os apps desta página para removê-la", es: "Quita las apps de esta página para eliminarla" },
+    "Shut Down": { pt: "Desligar", es: "Apagar" },
+    "Restart": { pt: "Reiniciar", es: "Reiniciar" },
+    "Lock": { pt: "Bloquear", es: "Bloquear" },
+    "Log Out": { pt: "Sair da sessão", es: "Cerrar sesión" },
+    "No results": { pt: "Nenhum resultado", es: "Sin resultados" },
+    // configurações
+    "Icon:": { pt: "Ícone:", es: "Icono:" },
+    "Choose…": { pt: "Escolher…", es: "Elegir…" },
+    "Clear Icon": { pt: "Limpar ícone", es: "Quitar icono" },
+    "Favorites dock": { pt: "Dock de favoritos", es: "Dock de favoritos" },
+    "Text shadow": { pt: "Sombra no nome dos apps", es: "Sombra en el nombre de las apps" },
+    "System actions": { pt: "Botões de desligar e sessão", es: "Botones de apagado y sesión" },
+    "Grid and icons": { pt: "Grade e ícones", es: "Cuadrícula e iconos" },
+    "Columns:": { pt: "Colunas:", es: "Columnas:" },
+    "Rows:": { pt: "Linhas:", es: "Filas:" },
+    "Icon size:": { pt: "Tamanho dos ícones:", es: "Tamaño de los iconos:" },
+    "Hidden apps": { pt: "Apps ocultos", es: "Apps ocultas" },
+    "Show": { pt: "Mostrar", es: "Mostrar" },
+    "No hidden apps": { pt: "Nenhum app oculto", es: "Ninguna app oculta" }
 }
 
-function removeByAppIndex(appIndex) {
-    for (var i = 0; i < appsModel.count; i++) {
-        if (appsModel.get(i).appIndex === appIndex) {
-            appsModel.remove(i, 1)
-            break
-        }
-    }
+var lang = (Qt.locale().name || "en").substring(0, 2)
+
+function tr(text) {
+    var t = strings[text]
+    return t && t[lang] ? t[lang] : text
 }
 
-function updatesubModel(name,newArrayModel) {
-    for (var i = 0; i < subModel.length; i++) {
-        var subArray = subModel[i].elements
-        for (var t = 0; t < subArray.length; t++) {
-            console.log(subArray[t].display,name)
-            if (subArray[t].display === name) {
-                subModel[i].elements = cloneToPureArray(newArrayModel)
-                saveSubModel()
-                break
-            }
-        }
-    }
-
+function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v))
 }
 
-function cloneToPureArray(array) {
-    var result = []
-    for (var i = 0; i < array.length; i++) {
-        var item = array[i]
-        result.push({
-            display: item.display,
-            decoration: item.decoration,
-            appIndex: item.appIndex
-        })
-    }
-    return result
-}
-
-function findHiddenMissingApps(stringList, array) {
-    let missing = []
-
-    for (let i = 0; i < array.length; i++) {
-        let app = array[i]
-        if (stringList.indexOf(app) === -1) {
-            missing.push(app)
-        }
-    }
-
-    for (var w = 0; w < missing.length; w++){
-        addAppAppModel(missing[w])
-    }
-}
-
-function addAppAppModel(appName) {
-    var applicationsModel = rootModel.modelForRow(0)
-    if (!applicationsModel)
-        return
-
-        for (var j = 0; j < applicationsModel.count; j++) {
-            var idx = applicationsModel.index(j, 0)
-            var nameInModel = applicationsModel.data(idx, Qt.DisplayRole)
-
-            if (nameInModel === appName) {
-
-                // Insertar al final de las apps normales
-                appsModel.append({
-                    display: nameInModel,
-                    appIndex: j,
-                    decoration: applicationsModel.data(idx, Qt.DecorationRole),
-                                 isGroup: false,
-                                 favoriteId: applicationsModel.data(idx, "storageId")
-                })
-
-                return
-            }
-        }
-}
-
-
-function removeGroup(index) {
-    // el index debe ser en funcion de appsModel
-    var target = appsModel.get(index)
-
-    for (var h = 0; h < subModel.length; h++) {
-        if (target.display === subModel[h].displayGrupName) {
-            subModel.splice(h,1)
-            saveSubModel()
-            break;
-        }
-    }
-
-    var arrayModelGroup = toArray(target.modelGroup)
-
-    var arrayOfNames = []
-
-    for (var r = 0; r < arrayModelGroup.length; r++) {
-        arrayOfNames.push(arrayModelGroup[r].display)
-    }
-
-    appsModel.remove(index) // se elimina el grupo completo antes de agregar las nuevas app, ya que de hacerse despues el index puede cambiar
-
-    for (var g = 0; g < arrayOfNames.length; g++) {
-        addAppAppModel(arrayOfNames[g])
-    }
-    saveOrderIfCustom()
-
-
-}
-
-function removeAppOfGroup(targetIndex, appName) {
-
-    var target = appsModel.get(targetIndex)
-    var arrayModelGroup = toArray(target.modelGroup)
-
-    if (arrayModelGroup.length > 1) {
-        // Buscar el índice del elemento a eliminar
-        var indexToRemove = -1
-        for (var i = 0; i < arrayModelGroup.length; i++) {
-            if (arrayModelGroup[i].display === appName) {
-                indexToRemove = i
-                break
-            }
-        }
-
-        if (indexToRemove !== -1) {
-            // Crear nuevo array sin el elemento
-            var newArrayModel = []
-            for (var j = 0; j < arrayModelGroup.length; j++) {
-                if (j !== indexToRemove) {
-
-                    newArrayModel.push(arrayModelGroup[j])
-
-                }
-            }
-            updatesubModel(appName, newArrayModel)
-
-            // llena model temporal para matener el grupo visible
-            groupTemporalModel.clear()
-            for (var e =0; e < newArrayModel.length; e++){
-                groupTemporalModel.append({
-                    display: newArrayModel[e].display,
-                    decoration: newArrayModel[e].decoration,
-                    isGrupo: false,
-                    appIndex: newArrayModel[e].appIndex
-                })
-            }
-            folderAppModel = groupTemporalModel //actualiza model del grupo
-            /*/*/
-            appsModel.set(targetIndex, {
-                modelGroup: newArrayModel,
-                display: target.display,
-                isGroup: true
-            })
-
-            addAppAppModel(appName)
-            saveOrderIfCustom()
-
-        }
-
-    } else {
-        activeGroup = false
-        removeGroup(targetIndex)
-    }
-}
-
-function renameGroup(index,newName) {
-    var name = appsModel.get(index).display
-    console.log(name,subModel.length)
-    for (var i = 0; i < subModel.length; i++) {
-        if (subModel[i].displayGrupName === name) {
-            subModel[i].displayGrupName = newName
-            saveSubModel()
-            break
-        }
-    }
-
-    appsModel.set(index, { "display": newName })
-    saveOrderIfCustom()
-
-}
-
-function relocateGroup(index) {
-    for (var i = 0; i < subModel.length; i++) {
-        if (subModel[i].displayGrupName === appsModel.get(index).display) {
-            subModel[i].indexInModel = index
-            saveSubModel()
-            break
-        }
-    }
-    saveOrderIfCustom()
+function isColorLight(c) {
+    return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.5
 }

@@ -26,8 +26,15 @@
       <default>88</default>
     </entry>
 
+    <entry name="gridColumns" type="Int">
+      <default>7</default>
+    </entry>
+    <entry name="gridRows" type="Int">
+      <default>5</default>
+    </entry>
+
     <entry name="enabledShadow" type="Bool">
-      <default>true</default>
+      <default>false</default>
     </entry>
     <entry name="hiddenApps" type="StringList">
       <default></default>

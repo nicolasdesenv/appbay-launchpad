@@ -1,45 +1,40 @@
 import QtQuick
 import org.kde.kirigami as Kirigami
 
-Item {
-    width: dock.width
-    height: dock.height
+// Dock opcional com os favoritos (desligado por padrão)
+Rectangle {
+    id: dock
 
-    property var favModel: globalFavorites
-    property int sizeIconDock
-    property int spacingMargin
-    property int maxIconsInDock
-    Rectangle {
-        id: dock
-        width: favModel.count < maxIconsInDock ? (favModel + spacingMargin) * favModel.count : maxIconsInDock * (sizeIconDock + spacingMargin) + spacingMargin*4
-        height: sizeIconDock + spacingMargin*2
-        radius: 16
-        color:  Qt.rgba(bgColor.r, bgColor.g, bgColor.b, 0.6)
-    }
+    property var favModel: kicker.globalFavorites
+    property int sizeIconDock: 64
+    property int spacingMargin: 8
+    property int maxIconsInDock: 8
+    readonly property int shown: favModel ? Math.min(favModel.count, maxIconsInDock) : 0
+
+    visible: shown > 0
+    width: shown * (sizeIconDock + spacingMargin) + spacingMargin
+    height: sizeIconDock + spacingMargin * 2
+    radius: 16
+    color: Qt.rgba(kicker.bgColor.r, kicker.bgColor.g, kicker.bgColor.b, 0.6)
+
     Row {
-        width: dock.width - spacingMargin*5
-        height: sizeIconDock + spacingMargin*2
-        anchors.horizontalCenter: dock.horizontalCenter
-        spacing: spacingMargin
-        Repeater {
-            model: favModel
+        x: dock.spacingMargin
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: dock.spacingMargin
 
-            delegate: Item {
-                height: sizeIconDock + spacingMargin*2
-                width: sizeIconDock
-                Kirigami.Icon {
-                    source: decoration
-                    width: sizeIconDock
-                    height: width
-                    visible: index < maxIconsInDock
-                    anchors.verticalCenter: parent.verticalCenter
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            width: width + 16
-                            globalFavorites.trigger(index, "", null)
-                            dashboard.toggle()
-                        }
+        Repeater {
+            model: dock.favModel
+            delegate: Kirigami.Icon {
+                visible: index < dock.maxIconsInDock
+                width: dock.sizeIconDock
+                height: dock.sizeIconDock
+                source: model.decoration
+                animated: false
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        dock.favModel.trigger(index, "", null)
+                        dashboard.toggle()
                     }
                 }
             }

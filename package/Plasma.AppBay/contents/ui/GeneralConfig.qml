@@ -33,6 +33,7 @@ import org.kde.plasma.plasmoid
 import org.kde.kcmutils as KCM
 
 import org.kde.iconthemes as KIconThemes
+import "Utils.js" as Utils
 
 
 KCM.SimpleKCM {
@@ -47,8 +48,9 @@ KCM.SimpleKCM {
     property bool cfg_useCustomButtonImage: Plasmoid.configuration.useCustomButtonImage
     property string cfg_customButtonImage: Plasmoid.configuration.customButtonImage
     property alias cfg_dockF: dock.checked
-    property alias cfg_cellSize: gridAndIcon.cellSize
     property alias cfg_iconSize: gridAndIcon.iconSize
+    property alias cfg_gridColumns: gridColumns.value
+    property alias cfg_gridRows: gridRows.value
     property alias cfg_enabledShadow: enabledShadow.checked
     property alias cfg_hiddenApps: hiddenList.apps
     property alias cfg_systemActionsButtons: systemActionsButtons.checked
@@ -56,7 +58,6 @@ KCM.SimpleKCM {
     QtObject {
         id: gridAndIcon
         property int iconSize
-        property int cellSize
     }
 
     Settings {
@@ -71,7 +72,7 @@ KCM.SimpleKCM {
         Button {
             id: iconButton
 
-            Kirigami.FormData.label: i18n("Icon:")
+            Kirigami.FormData.label: Utils.tr("Icon:")
 
             implicitWidth: previewFrame.width + Kirigami.Units.smallSpacing * 2
             implicitHeight: previewFrame.height + Kirigami.Units.smallSpacing * 2
@@ -151,15 +152,15 @@ KCM.SimpleKCM {
                 onClosed: iconButton.checked = false;
 
                 MenuItem {
-                    text: i18nc("@item:inmenu Open icon chooser dialog", "Choose…")
+                    text: Utils.tr("Choose…")
                     icon.name: "document-open-folder"
                     onClicked: iconDialog.open()
                 }
                 MenuItem {
-                    text: i18nc("@item:inmenu Reset icon to default", "Clear Icon")
+                    text: Utils.tr("Clear Icon")
                     icon.name: "edit-clear"
                     onClicked: {
-                        configGeneral.cfg_icon = "start-here-kde-symbolic"
+                        configGeneral.cfg_icon = "appbay-launchpad"
                         configGeneral.cfg_useCustomButtonImage = false
                     }
                 }
@@ -171,68 +172,47 @@ KCM.SimpleKCM {
         }
         CheckBox {
             id: dock
-            Kirigami.FormData.label: i18n("Enabled Favorites dock")
+            Kirigami.FormData.label: Utils.tr("Favorites dock")
         }
         CheckBox {
             id: enabledShadow
-            Kirigami.FormData.label: i18n("Enabled Shadown")
+            Kirigami.FormData.label: Utils.tr("Text shadow")
         }
         CheckBox {
             id: systemActionsButtons
-            Kirigami.FormData.label: i18n("Enabled System Actions")
+            Kirigami.FormData.label: Utils.tr("System actions")
         }
         Kirigami.Separator {
             Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: i18n("Grids and Icons")
+            Kirigami.FormData.label: Utils.tr("Grid and icons")
         }
 
-
-        ComboBox {
-            id: cellSize
-            Kirigami.FormData.label: i18n("Size of cell:")
-            model: [48, 64, 96, 128, 256, 320, 512]
-            onActivated: gridAndIcon.cellSize = currentValue
-
-            // Función auxiliar para encontrar el índice de un valor en el modelo
-            function findIndex(value) {
-                for (var i = 0; i < model.length; i++) {
-                    if (model[i] === value) {
-                        return i;
-                    }
-                }
-                return -1;
-            }
-
-            Component.onCompleted: {
-                var idx = findIndex(gridAndIcon.cellSize)
-                currentIndex = idx >= 0 ? idx : 0
-            }
+        SpinBox {
+            id: gridColumns
+            Kirigami.FormData.label: Utils.tr("Columns:")
+            from: 3
+            to: 12
+        }
+        SpinBox {
+            id: gridRows
+            Kirigami.FormData.label: Utils.tr("Rows:")
+            from: 2
+            to: 8
         }
 
         ComboBox {
             id: iconSize
-            Kirigami.FormData.label: i18n("Icon Size:")
-            model: [48, 64, 96, 128, 256, 320, 512]
+            Kirigami.FormData.label: Utils.tr("Icon size:")
+            model: [48, 64, 72, 88, 96, 112, 128]
             onActivated: gridAndIcon.iconSize = currentValue
-
-            // Función auxiliar para encontrar el índice de un valor en el modelo
-            function findIndex(value) {
-                for (var i = 0; i < model.length; i++) {
-                    if (model[i] === value) {
-                        return i;
-                    }
-                }
-                return -1;
-            }
-
             Component.onCompleted: {
-                var idx = findIndex(gridAndIcon.iconSize)
-                currentIndex = idx >= 0 ? idx : 0
+                var idx = model.indexOf(gridAndIcon.iconSize)
+                currentIndex = idx >= 0 ? idx : 3
             }
         }
         Kirigami.Separator {
             Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: i18n("Hidden Apps")
+            Kirigami.FormData.label: Utils.tr("Hidden apps")
         }
 
         Repeater {
@@ -242,26 +222,26 @@ KCM.SimpleKCM {
             delegate: Button {
                 Kirigami.FormData.label: modelData
                 id: restoreButton
-                text: i18n("Show")
+                text: Utils.tr("Show")
                 icon.name: "view-visible"
                 onClicked: {
                     hiddenList.apps.splice(index,1)
-                    hiddenList.apps = hiddenList.apps.slice() // ← fuerza actualización
-
-                    console.log(hiddenList.apps)
+                    hiddenList.apps = hiddenList.apps.slice() // força a atualização
                 }
             }
         }
+        Label {
+            visible: hiddenList.apps.length === 0
+            text: Utils.tr("No hidden apps")
+            opacity: 0.7
+        }
+
         Component.onCompleted: {
             var value = appBaySettings.value("configHiddenApps")
-            console.log(value)
-            if (typeof value === "string") {
-                console.log("is string")
-                // Si es una cadena, conviértela en array de un solo elemento
-                hiddenList.apps = [value]
-            } else {
-                hiddenList.apps = value
-            }
+            if (typeof value === "string")
+                hiddenList.apps = value ? [value] : []
+            else
+                hiddenList.apps = value ? value : []
         }
     }
 }

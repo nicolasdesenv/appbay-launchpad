@@ -32,20 +32,6 @@ fi
 for c in gdbus kpackagetool6 kwriteconfig6; do
   command -v $c >/dev/null || { echo "Falta o programa '$c'."; exit 1; }
 done
-has_qt5compat() {
-  for d in /usr/lib*/qt6/qml/Qt5Compat/GraphicalEffects /usr/lib/*/qt6/qml/Qt5Compat/GraphicalEffects; do
-    [ -d "$d" ] && return 0
-  done
-  return 1
-}
-if ! has_qt5compat; then
-  warn "Falta a biblioteca Qt5Compat. Instale e rode este script de novo:"
-  if command -v dnf >/dev/null; then echo "    sudo dnf install qt6-qt5compat"
-  elif command -v apt >/dev/null; then echo "    sudo apt install qml6-module-qt5compat-graphicaleffects"
-  else echo "    (pacote qt6-qt5compat da sua distribuição)"; fi
-  exit 1
-fi
-
 say "Instalando o widget AppBay..."
 LOCAL_PKG=~/.local/share/plasma/plasmoids/Plasma.AppBay
 if kpackagetool6 -t Plasma/Applet -s Plasma.AppBay >/dev/null 2>&1; then
@@ -71,6 +57,12 @@ kwriteconfig6 --file kwinrc --group Plugins --key launchpadzoomEnabled true
 gdbus call --session --dest org.kde.KWin --object-path /KWin --method org.kde.KWin.reconfigure >/dev/null 2>&1 || true
 gdbus call --session --dest org.kde.KWin --object-path /Effects --method org.kde.kwin.Effects.loadEffect launchpadzoom >/dev/null 2>&1 || true
 
+say "Instalando o gesto de pinça do touchpad..."
+GEST=~/.local/share/kwin/scripts/appbaygestures
+GEST_UPDATE=0; [ -d "$GEST" ] && GEST_UPDATE=1
+mkdir -p ~/.local/share/kwin/scripts; rm -rf "$GEST"; cp -r "$DIR/kwin-script/appbaygestures" "$GEST"
+kwriteconfig6 --file kwinrc --group Plugins --key appbaygesturesEnabled true
+
 say "Liberando a tecla Meta (o menu antigo continua no Alt+F1)..."
 gdbus call --session --dest org.kde.kglobalaccel --object-path /kglobalaccel \
   --method org.kde.KGlobalAccel.setForeignShortcut \
@@ -79,10 +71,14 @@ gdbus call --session --dest org.kde.kglobalaccel --object-path /kglobalaccel \
 say "Colocando o Launchpad no painel..."
 RES=$(plasma_eval '
 var ps = panels(), target = null;
+// já instalado (atualização): usa o painel onde o launcher já está, sem criar outro
+for (var i = 0; i < ps.length && !target; i++)
+  if (ps[i].widgets("Plasma.AppBay").length) target = ps[i];
+// instalação nova: o painel da barra de tarefas/dock (inclui variantes, ex. icontasks.skyler)
 for (var i = 0; i < ps.length && !target; i++) {
   var ws = ps[i].widgets();
   for (var j = 0; j < ws.length; j++)
-    if (ws[j].type == "org.kde.plasma.icontasks" || ws[j].type == "org.kde.plasma.taskmanager") { target = ps[i]; break; }
+    if (ws[j].type.indexOf("org.kde.plasma.icontasks") == 0 || ws[j].type.indexOf("org.kde.plasma.taskmanager") == 0) { target = ps[i]; break; }
 }
 if (!target && ps.length) target = ps[0];
 if (target) {
@@ -97,10 +93,14 @@ if (target) {
 ')
 if [ "$RES" != "NONE" ] && [ -n "$RES" ]; then
   PANEL=${RES%% *}; ORDER=${RES#* }
+  # o gesto de pinça abre o launcher pelo atalho deste widget
+  kwriteconfig6 --file kwinrc --group Script-appbaygestures --key WidgetId "${ORDER%%;*}"
+  gdbus call --session --dest org.kde.KWin --object-path /KWin --method org.kde.KWin.reconfigure >/dev/null 2>&1 || true
   sleep 2
   restart_plasma_with "kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group '$PANEL' --group General --key AppletOrder '$ORDER'"
   sleep 3
-  say "Pronto! Aperte a tecla Meta (a do logo do Windows) ou clique no foguete no painel."
+  say "Pronto! Aperte a tecla Meta (a do logo do Windows), clique no foguete no painel ou junte 4 dedos no touchpad."
+  [ "$GEST_UPDATE" = 1 ] && warn "O gesto de pinça atualizado passa a valer depois de sair e entrar de novo na sessão."
 else
   say "Instalado, mas não achei um painel. Clique com o botão direito na área de trabalho > Adicionar widgets > procure \"AppBay\"."
 fi

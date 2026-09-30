@@ -1,13 +1,25 @@
 import QtQuick
+import QtQuick.Controls as QQC2
 import org.kde.plasma.private.sessions as Sessions
 import org.kde.kirigami as Kirigami
+import "Utils.js" as Utils
 
-Item {
-    width: wrapperActionsButtons.width
-    height: wrapperActionsButtons.height
+Row {
+    id: actions
 
     property int iconsSize: 24
-    property int spacingRow: 8
+    spacing: 8
+
+    function run(action) {
+        if (action === "shutdown")
+            sm.requestShutdown()
+        else if (action === "restart")
+            sm.requestRestart()
+        else if (action === "lock")
+            sessionsModel.startNewSession(sessionsModel.shouldLock)
+        else if (action === "logout")
+            sm.requestLogoutPrompt()
+    }
 
     Sessions.SessionManagement {
         id: sm
@@ -17,58 +29,26 @@ Item {
         id: sessionsModel
     }
 
-    Row {
-        id: wrapperActionsButtons
-        width: (spacingRow*3) + (iconsSize*4)
-        height: iconsSize
-        spacing: spacingRow
-
-        // Botón Apagar
-        Kirigami.Icon {
-            id: shutdownButton
-            width: iconsSize
-            height: iconsSize
-            source: "system-shutdown"   // Icono de apagar
+    Repeater {
+        model: [
+            { icon: "system-shutdown", label: "Shut Down", action: "shutdown" },
+            { icon: "system-reboot", label: "Restart", action: "restart" },
+            { icon: "system-lock-screen", label: "Lock", action: "lock" },
+            { icon: "system-log-out", label: "Log Out", action: "logout" }
+        ]
+        delegate: Kirigami.Icon {
+            width: actions.iconsSize
+            height: actions.iconsSize
+            source: modelData.icon
+            opacity: hover.containsMouse ? 1 : 0.75
             MouseArea {
+                id: hover
                 anchors.fill: parent
-                onClicked: sm.requestShutdown()
+                hoverEnabled: true
+                onClicked: actions.run(modelData.action)
             }
-        }
-
-        // Botón Reiniciar
-        Kirigami.Icon {
-            id: restartButton
-            width: iconsSize
-            height: iconsSize
-            source: "system-reboot"   // Icono de reinicio
-            MouseArea {
-                anchors.fill: parent
-                onClicked: sm.requestRestart()
-            }
-        }
-
-        // Botón Bloquear
-        Kirigami.Icon {
-            id: lockButton
-            width: iconsSize
-            height: iconsSize
-            source: "system-lock-screen"   // Icono de bloqueo
-            MouseArea {
-                anchors.fill: parent
-                onClicked: sessionsModel.startNewSession(sessionsModel.shouldLock)
-            }
-        }
-
-        // Botón Cerrar Sesión
-        Kirigami.Icon {
-            id: logoutButton
-            width: iconsSize
-            height: iconsSize
-            source: "system-log-out"   // Icono de cerrar sesión
-            MouseArea {
-                anchors.fill: parent
-                onClicked: sm.requestLogoutPrompt()
-            }
+            QQC2.ToolTip.visible: hover.containsMouse
+            QQC2.ToolTip.text: Utils.tr(modelData.label)
         }
     }
 }
