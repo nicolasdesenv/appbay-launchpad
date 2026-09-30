@@ -45,7 +45,9 @@ PlasmoidItem {
     id: appBaySettings
     category: "AppBay"
     property var configHiddenApps: []
-    property var configSubModelJson: []
+    // string declarada: gravar por setValue() numa chave que também é propriedade
+    // fazia o Settings sobrescrever as pastas com o valor vazio ao fechar o Plasma
+    property string configSubModelJson: ""
     property string configAppOrderJson: ""
   }
 
@@ -75,6 +77,7 @@ PlasmoidItem {
     }
     appOrder = keys
     appBaySettings.configAppOrderJson = JSON.stringify(keys)
+    appBaySettings.sync()
   }
 
   function saveOrderIfCustom() {
@@ -115,17 +118,17 @@ PlasmoidItem {
 
 
   function saveSubModel() {
-    appBaySettings.setValue("configSubModelJson",JSON.stringify(subModel))
+    appBaySettings.configSubModelJson = JSON.stringify(subModel)
+    appBaySettings.sync()
   }
 
   function loadSettings() {
-    if (appBaySettings.value("configSubModelJson")) {
-      if (appBaySettings.value("configSubModelJson") === "@Invalid()") {
+    try {
+      var groups = appBaySettings.configSubModelJson
+      subModel = groups ? JSON.parse(groups) : []
+      if (!Array.isArray(subModel))
         subModel = []
-      } else {
-        subModel = JSON.parse(appBaySettings.value("configSubModelJson"))
-      }
-    } else {
+    } catch (e) {
       subModel = []
     }
 

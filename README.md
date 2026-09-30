@@ -119,6 +119,48 @@ Depois:
 | Remover página | Botão **−** (só em página vazia) |
 | Renomear pasta / esconder app | Botão direito no item |
 
+## Atualizar
+
+Suas pastas, a ordem dos apps e as páginas são mantidas na atualização.
+
+### 1. Atualize o sistema (recomendado)
+
+O launcher depende do Plasma e do Qt5Compat da sua distro. Deixe os dois em dia antes de atualizar o widget:
+
+| Distro | Comando |
+|---|---|
+| **Fedora KDE** | `sudo dnf upgrade --refresh` |
+| **Kubuntu / Ubuntu**, **KDE neon**, **Debian 13** | `sudo apt update && sudo apt full-upgrade` (no **KDE neon**, prefira `sudo pkcon update`) |
+| **Arch**, **EndeavourOS**, **CachyOS** | `sudo pacman -Syu` |
+| **Manjaro** | `sudo pacman -Syu` ou `pamac upgrade` |
+| **openSUSE Tumbleweed** | `sudo zypper dup` |
+
+Se o sistema atualizou o Plasma, reinicie a sessão antes de seguir.
+
+### 2. Baixe a versão nova e reinstale
+
+É igual em todas as distros. Na pasta onde você clonou o projeto:
+
+```bash
+cd appbay-launchpad
+git pull
+bash instalar.sh
+```
+
+Instalou pelo ZIP? Baixe o [ZIP novo](https://github.com/nicolasdesenv/appbay-launchpad/archive/refs/heads/main.zip), extraia por cima da pasta antiga e rode `bash instalar.sh` de novo.
+
+O instalador percebe que o widget já está instalado e só troca os arquivos. O painel reinicia e a tela pisca, como na primeira instalação.
+
+Para ver a versão instalada:
+
+```bash
+kpackagetool6 -t Plasma/Applet -s Plasma.AppBay
+```
+
+> [!NOTE]
+> Até a versão `0.2.7-launchpad.1`, as pastas sumiam quando o Plasma reiniciava ou quando você saía da sessão.
+> Pastas que já sumiram não voltam com a atualização. Crie de novo uma vez, e a partir daí elas ficam salvas.
+
 ## Desinstalar
 
 ```bash
@@ -129,7 +171,7 @@ O script remove o widget, os ícones e a animação, e devolve a tecla Meta ao m
 
 ## Limitações conhecidas
 
-- Não atualize este widget pela loja do KDE (**Obter novos widgets**). A loja instala o AppBay original por cima e desfaz os ajustes. Para atualizar, rode `git pull` e depois `bash instalar.sh` de novo.
+- Não atualize este widget pela loja do KDE (**Obter novos widgets**). A loja instala o AppBay original por cima e desfaz os ajustes. Para atualizar, veja [Atualizar](#atualizar).
 - Só dá para remover páginas vazias. Tire os apps da página antes.
 
 ## Créditos e licença

@@ -47,8 +47,14 @@ if ! has_qt5compat; then
 fi
 
 say "Instalando o widget AppBay..."
+LOCAL_PKG=~/.local/share/plasma/plasmoids/Plasma.AppBay
 if kpackagetool6 -t Plasma/Applet -s Plasma.AppBay >/dev/null 2>&1; then
-  kpackagetool6 -t Plasma/Applet -u "$DIR/package/Plasma.AppBay" >/dev/null
+  # versões antigas (e a da loja) não têm KPackageStructure e o -u falha nelas;
+  # aí trocamos a pasta do widget. As pastas e a ordem dos apps ficam em outro lugar.
+  if ! kpackagetool6 -t Plasma/Applet -u "$DIR/package/Plasma.AppBay" >/dev/null 2>&1; then
+    rm -rf "$LOCAL_PKG"
+    kpackagetool6 -t Plasma/Applet -i "$DIR/package/Plasma.AppBay" >/dev/null
+  fi
 else
   kpackagetool6 -t Plasma/Applet -i "$DIR/package/Plasma.AppBay" >/dev/null
 fi
